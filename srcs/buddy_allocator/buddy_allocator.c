@@ -1,7 +1,7 @@
 #include "buddy_allocator.h"
 #include <string.h>
 
-void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uint32_t area_start_addr, uint32_t area_size, uint32_t* required_memory_size_ptr)
+void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, size_t* required_memory_size_ptr)
 {
     if (allocator_ptr == NULL || area_start_addr % BUDDY_ALLOCATOR_PAGE_SIZE != 0 || area_size == 0 || required_memory_size_ptr == NULL) {
         return;

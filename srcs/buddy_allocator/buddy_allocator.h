@@ -25,14 +25,14 @@ typedef struct {
 
 typedef struct {
     // Main variables
-    uint32_t area_start_addr;
+    uintptr_t area_start_addr;
     // The size of the area rounded to largest block size.
-    uint32_t area_size;
+    size_t area_size;
 
     // Large block size (2^MAX_ORDER * PAGE_SIZE)
-    uint32_t large_block_size;
+    size_t large_block_size;
     // Small block size (PAGE_SIZE)
-    uint32_t small_block_size;
+    size_t small_block_size;
     // Total number of the large blocks
     uint32_t large_blocks_max_number;
     // Total number of the small blocks
@@ -43,19 +43,19 @@ typedef struct {
     // Array of nodes that are free to use. These nodes are used in doubly-linked lists of free blocks.
     block_node_t* free_dll_nodes_memory;
     // Size of this array
-    uint32_t free_dll_nodes_memory_size;
+    size_t free_dll_nodes_memory_size;
     // Stack storing pointers to nodes of a doubly-linked list that are free for use (free_dll_nodes). These nodes are used in doubly-linked lists of free blocks.
     stack_t free_dll_nodes_ptrs_stack;
     // Memory for pointers stack
     block_node_t** free_dll_nodes_ptrs_stack_memory;
     // Size of this memory (stack)
-    uint32_t free_dll_nodes_ptrs_stack_memory_size;
+    size_t free_dll_nodes_ptrs_stack_memory_size;
 
     // Array of allocations orders.
     // To free memory by address, we need to know the block size, this array contains the allocation orders, the allocation address is the offset in this array.
     uint8_t* allocations_orders_memory;
     // Size of this array
-    uint32_t allocations_orders_memory_size;
+    size_t allocations_orders_memory_size;
 
     /*
      * An array of free lists, each element of which represents a pointer to the beginning of a separate doubly-linked list for each order.
@@ -82,7 +82,7 @@ typedef struct {
  * In order for the allocator to work, it is necessary to allocate memory for its needs.
  * The amount of this memory depends on the size of area (area_size) that the allocator will manage.
  */
-extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uint32_t area_start_addr, uint32_t area_size, uint32_t* required_memory_size_ptr);
+extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, size_t* required_memory_size_ptr);
 
 /*
  * Finishes initialization by initializing the memory required to work the allocator.
