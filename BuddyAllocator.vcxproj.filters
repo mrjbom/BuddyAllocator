@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\dllist">
+      <UniqueIdentifier>{a2d6edfc-fa64-4d58-8cb5-b66cf8d20e89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\dllist">
+      <UniqueIdentifier>{bee23bff-b131-4ebf-9609-04de563356bc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\buddy_allocator">
+      <UniqueIdentifier>{c54f5c00-88f9-4922-aae7-9f8f326ed472}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\buddy_allocator">
+      <UniqueIdentifier>{198711b0-fcdd-4b13-9dc3-f0cc97d9b854}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\tests">
+      <UniqueIdentifier>{611501b9-abdd-4809-8176-281583fe81dc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\tests">
+      <UniqueIdentifier>{89b741a8-90a0-41df-86d2-c211bec583ed}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\stack">
+      <UniqueIdentifier>{4a8c6cf7-07ee-4fad-a23e-1ba7d22c45f9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\stack">
+      <UniqueIdentifier>{1e30dd3d-7ab6-4e46-8616-56f401a438ad}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="srcs\dllist\dllist.c">
+      <Filter>Source Files\dllist</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\main.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\buddy_allocator\buddy_allocator.c">
+      <Filter>Source Files\buddy_allocator</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\tests\tests.c">
+      <Filter>Source Files\tests</Filter>
+    </ClCompile>
+    <ClCompile Include="srcs\stack\stack.c">
+      <Filter>Source Files\stack</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="srcs\dllist\dllist.h">
+      <Filter>Header Files\dllist</Filter>
+    </ClInclude>
+    <ClInclude Include="srcs\buddy_allocator\buddy_allocator.h">
+      <Filter>Header Files\buddy_allocator</Filter>
+    </ClInclude>
+    <ClInclude Include="srcs\tests\tests.h">
+      <Filter>Header Files\tests</Filter>
+    </ClInclude>
+    <ClInclude Include="srcs\stack\stack.h">
+      <Filter>Header Files\stack</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
