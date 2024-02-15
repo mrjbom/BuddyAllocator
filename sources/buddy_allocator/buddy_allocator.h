@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include "../dllist/dllist.h"
-#include "../stack/stack.h"
 
 /*
  * Implementation of buddy allocator.
@@ -12,7 +11,16 @@
  * It is oriented on 32-bit address space, probably there will be problems when working in 64-bit address space. I am testing only the 32-bit version.
  * 
  * Implementation details:
+ * The allocator stores nodes for all blocks:
+ * |   0   |
+ * | 1 | 2 |
+ * |3|4|5|6|
+ * Total blocks (nodes) - 7
+ * This is a bit wasteful, but for a maximum area size of 4GB, to store all nodes at a node size of 8 bytes would require about 17 megabytes of memory, not much.
  * 
+ * If any block is free, it is placed in the free list according to its size.
+ * The free lists allows to quickly get a block of the required size, if it.
+ * Also allocator stores the size order of the allocated block.
  */
 
 #define BUDDY_ALLOCATOR_MAX_ORDER 10
@@ -20,7 +28,6 @@
 
 typedef struct {
     dll_node_t dll_node;
-    struct block_node_t* buddy_block_ptr;
 } block_node_t;
 
 typedef struct {
@@ -34,26 +41,20 @@ typedef struct {
     // Small block size (PAGE_SIZE)
     size_t small_block_size;
     // Total number of the large blocks
-    uint32_t large_blocks_max_number;
+    uint32_t large_blocks_number;
     // Total number of the small blocks
-    uint32_t small_blocks_max_number;
+    uint32_t small_blocks_number;
+    // Total of all blocks of all sizes
+    uint32_t total_blocks_number;
 
-    // Total number of free for use doubly-linked list nodes
-    uint32_t free_dll_nodes_max_number;
-    // Array of nodes that are free to use. These nodes are used in doubly-linked lists of free blocks.
-    block_node_t* free_dll_nodes_memory;
+    // Array of all blocks nodes
+    block_node_t* blocks_nodes;
     // Size of this array
-    size_t free_dll_nodes_memory_size;
-    // Stack storing pointers to nodes of a doubly-linked list that are free for use (free_dll_nodes). These nodes are used in doubly-linked lists of free blocks.
-    stack_t free_dll_nodes_ptrs_stack;
-    // Memory for pointers stack
-    block_node_t** free_dll_nodes_ptrs_stack_memory;
-    // Size of this memory (stack)
-    size_t free_dll_nodes_ptrs_stack_memory_size;
+    size_t blocks_nodes_memory_size;
 
     // Array of allocations orders.
     // To free memory by address, we need to know the block size, this array contains the allocation orders, the allocation address is the offset in this array.
-    uint8_t* allocations_orders_memory;
+    uint8_t* allocations_orders;
     // Size of this array
     size_t allocations_orders_memory_size;
 
@@ -91,5 +92,10 @@ extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t 
  * The size of this memory must be not less than the size specified in required_total_size_ptr after calling buddy_allocator_preinit function.
  */
 extern void buddy_allocator_init(buddy_allocator_t* allocator_ptr, void* required_memory_ptr);
+
+/*
+ * 
+ */
+extern void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size);
 
 #endif

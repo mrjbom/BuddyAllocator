@@ -31,42 +31,30 @@
     <Filter Include="Header Files\tests">
       <UniqueIdentifier>{89b741a8-90a0-41df-86d2-c211bec583ed}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\stack">
-      <UniqueIdentifier>{4a8c6cf7-07ee-4fad-a23e-1ba7d22c45f9}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Header Files\stack">
-      <UniqueIdentifier>{1e30dd3d-7ab6-4e46-8616-56f401a438ad}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="srcs\dllist\dllist.c">
+    <ClCompile Include="sources\dllist\dllist.c">
       <Filter>Source Files\dllist</Filter>
     </ClCompile>
-    <ClCompile Include="srcs\main.c">
+    <ClCompile Include="sources\main.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="srcs\buddy_allocator\buddy_allocator.c">
+    <ClCompile Include="sources\buddy_allocator\buddy_allocator.c">
       <Filter>Source Files\buddy_allocator</Filter>
     </ClCompile>
-    <ClCompile Include="srcs\tests\tests.c">
+    <ClCompile Include="sources\tests\tests.c">
       <Filter>Source Files\tests</Filter>
-    </ClCompile>
-    <ClCompile Include="srcs\stack\stack.c">
-      <Filter>Source Files\stack</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="srcs\dllist\dllist.h">
+    <ClInclude Include="sources\dllist\dllist.h">
       <Filter>Header Files\dllist</Filter>
     </ClInclude>
-    <ClInclude Include="srcs\buddy_allocator\buddy_allocator.h">
+    <ClInclude Include="sources\buddy_allocator\buddy_allocator.h">
       <Filter>Header Files\buddy_allocator</Filter>
     </ClInclude>
-    <ClInclude Include="srcs\tests\tests.h">
+    <ClInclude Include="sources\tests\tests.h">
       <Filter>Header Files\tests</Filter>
-    </ClInclude>
-    <ClInclude Include="srcs\stack\stack.h">
-      <Filter>Header Files\stack</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

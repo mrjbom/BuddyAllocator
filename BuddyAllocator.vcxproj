@@ -19,17 +19,15 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="srcs\buddy_allocator\buddy_allocator.c" />
-    <ClCompile Include="srcs\dllist\dllist.c" />
-    <ClCompile Include="srcs\main.c" />
-    <ClCompile Include="srcs\stack\stack.c" />
-    <ClCompile Include="srcs\tests\tests.c" />
+    <ClCompile Include="sources\buddy_allocator\buddy_allocator.c" />
+    <ClCompile Include="sources\dllist\dllist.c" />
+    <ClCompile Include="sources\main.c" />
+    <ClCompile Include="sources\tests\tests.c" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="srcs\buddy_allocator\buddy_allocator.h" />
-    <ClInclude Include="srcs\dllist\dllist.h" />
-    <ClInclude Include="srcs\stack\stack.h" />
-    <ClInclude Include="srcs\tests\tests.h" />
+    <ClInclude Include="sources\buddy_allocator\buddy_allocator.h" />
+    <ClInclude Include="sources\dllist\dllist.h" />
+    <ClInclude Include="sources\tests\tests.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
