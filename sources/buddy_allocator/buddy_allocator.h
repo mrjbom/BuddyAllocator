@@ -23,9 +23,6 @@
  * Also allocator stores the size order of the allocated block.
  */
 
-#define BUDDY_ALLOCATOR_MAX_ORDER 10
-#define BUDDY_ALLOCATOR_PAGE_SIZE 4096
-
 typedef struct {
     dll_node_t dll_node;
 } block_node_t;
@@ -35,6 +32,10 @@ typedef struct {
     uintptr_t area_start_addr;
     // The size of the area rounded to largest block size.
     size_t area_size;
+    // Max order
+    uint8_t max_order;
+    // Page size
+    uint32_t page_size;
 
     // Large block size (2^MAX_ORDER * PAGE_SIZE)
     size_t large_block_size;
@@ -66,7 +67,9 @@ typedef struct {
      * up to
      * free_blocks_lists[MAX_ORDER] is a list of free blocks of size 2^MAX_ORDER * PAGE_SIZE
      */
-    doubly_linked_list_t free_blocks_lists[BUDDY_ALLOCATOR_MAX_ORDER + 1];
+    doubly_linked_list_t* free_blocks_lists;
+    // Size of this array
+    uint32_t free_blocks_lists_memory_size;
 } buddy_allocator_t;
 
 /*
@@ -76,6 +79,8 @@ typedef struct {
  * allocator_ptr pointer to allocator data
  * area_start_addr must be page aligned
  * area_size size of the memory area must to be larger than 2^max_order * page_size.
+ * max_order max order
+ * page_size page size
  * required_memory_size_ptr total size of the memory required by the allocator WILL BE PLACED BY THIS FUNCTION in this variable, it is necessary to allocate at least.
  * If it contains 0 after the function call, then the initialization has failed.
  *
@@ -83,7 +88,7 @@ typedef struct {
  * In order for the allocator to work, it is necessary to allocate memory for its needs.
  * The amount of this memory depends on the size of area (area_size) that the allocator will manage.
  */
-extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, size_t* required_memory_size_ptr);
+extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr);
 
 /*
  * Finishes initialization by initializing the memory required to work the allocator.
@@ -94,7 +99,11 @@ extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t 
 extern void buddy_allocator_init(buddy_allocator_t* allocator_ptr, void* required_memory_ptr);
 
 /*
- * 
+ * Allocates a block of memory, returns a pointer to memory within the allocator memory area
+ * allocator_ptr pointer to allocator data
+ * size requested memory size, it is rounded down to the nearest block
+ * For example, if PAGE_SIZE is 4096, size 4 will be rounded to 4096, 5000 to 8192, 15000 to 16384.
+ * The size cannot be larger than PAGE_SIZE * 2^MAX_ORDER
  */
 extern void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size);
 

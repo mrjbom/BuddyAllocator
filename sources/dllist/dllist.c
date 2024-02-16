@@ -130,4 +130,3 @@ void dll_remove_node(doubly_linked_list_t* list, dll_node_t* node)
         }
     }
 }
-

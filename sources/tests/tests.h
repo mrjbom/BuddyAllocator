@@ -3,6 +3,6 @@
 
 extern void tests_preinit(void);
 
-extern void tests_alloc_free_4MB(void);
+extern void tests_small_sizes(void);
 
 #endif
