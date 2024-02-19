@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-// Doubly linked list
+// Doubly-linked list
 
 typedef struct {
     void* next;
@@ -17,7 +17,7 @@ typedef struct {
 } doubly_linked_list_t;
 
 /*
- * Insert node to the end of the list (new tail) 
+ * Insert node to the end of the list (new tail)
  * (adds node to the list)
  */
 extern void dll_insert_node_to_tail(doubly_linked_list_t* list, dll_node_t* new_node);
@@ -30,12 +30,14 @@ extern void dll_insert_node_to_head(doubly_linked_list_t* list, dll_node_t* new_
 
 /*
  * Insert node after the node in the list
+ * Insert new_node after node_in_list
  * (adds node to the list)
  */
 extern void dll_insert_node_after_node(doubly_linked_list_t* list, dll_node_t* node_in_list, dll_node_t* new_node);
 
 /*
  * Insert node before the node in the list
+ * Insert new_node before node_in_list
  * (adds node to the list)
  */
 extern void dll_insert_node_before_node(doubly_linked_list_t* list, dll_node_t* node_in_list, dll_node_t* new_node);
@@ -44,5 +46,11 @@ extern void dll_insert_node_before_node(doubly_linked_list_t* list, dll_node_t* 
  * Remove node from the list
  */
 extern void dll_remove_node(doubly_linked_list_t* list, dll_node_t* node);
+
+/*
+ * Get node by index
+ * Returns NULL if the node failed to be get
+ */
+extern dll_node_t* dll_get_nth_node(doubly_linked_list_t* list, size_t index);
 
 #endif

@@ -25,7 +25,7 @@
 
 typedef struct {
     dll_node_t dll_node;
-} block_node_t;
+} memory_block_node_t;
 
 typedef struct {
     // Main variables
@@ -49,12 +49,14 @@ typedef struct {
     uint32_t total_blocks_number;
 
     // Array of all blocks nodes
-    block_node_t* blocks_nodes;
+    memory_block_node_t* blocks_nodes;
     // Size of this array
     size_t blocks_nodes_memory_size;
 
     // Array of allocations orders.
     // To free memory by address, we need to know the block size, this array contains the allocation orders, the allocation address is the offset in this array.
+    // Stores order + 1, so that it can be determined whether a block is actually allocated. If the value is 0, the block has not been allocated and cannot be released.
+    // Protects against re-releasing or releasing unallocated memory.
     uint8_t* allocations_orders;
     // Size of this array
     size_t allocations_orders_memory_size;
@@ -77,10 +79,10 @@ typedef struct {
  * After this function buddy_allocator_init function should be called, which completes initialization with allocated memory for allocator.
  * 
  * allocator_ptr pointer to allocator data
- * area_start_addr must be page aligned
+ * area_start_addr start of the memory area
  * area_size size of the memory area must to be larger than 2^max_order * page_size.
  * max_order max order
- * page_size page size
+ * page_size page size must be power of 2
  * required_memory_size_ptr total size of the memory required by the allocator WILL BE PLACED BY THIS FUNCTION in this variable, it is necessary to allocate at least.
  * If it contains 0 after the function call, then the initialization has failed.
  *
@@ -106,5 +108,12 @@ extern void buddy_allocator_init(buddy_allocator_t* allocator_ptr, void* require
  * The size cannot be larger than PAGE_SIZE * 2^MAX_ORDER
  */
 extern void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size);
+
+/*
+ * Free the memory allocated by the allocator at the address
+ * allocator_ptr pointer to allocator data
+ * memory_ptr pointer to memory allocated by allocator
+ */
+extern void buddy_allocator_free(buddy_allocator_t* allocator_ptr, void* memory_ptr);
 
 #endif

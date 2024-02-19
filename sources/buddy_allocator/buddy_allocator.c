@@ -1,22 +1,22 @@
 #include "buddy_allocator.h"
 #include <string.h>
+#include <stdbool.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 /*
  * Get the memory block index by node pointer
  */
-static uint32_t get_index_by_node(buddy_allocator_t* allocator_ptr, block_node_t* block_node_ptr)
+static uint32_t get_index_by_node(buddy_allocator_t* allocator_ptr, memory_block_node_t* block_node_ptr)
 {
-    return (((uintptr_t)block_node_ptr - (uintptr_t)allocator_ptr->blocks_nodes)) / sizeof(block_node_t);
+    return (((uintptr_t)block_node_ptr - (uintptr_t)allocator_ptr->blocks_nodes)) / sizeof(memory_block_node_t);
 }
 
 /*
  * Get the node pointer by memory block index
  */
-static block_node_t* get_node_by_index(buddy_allocator_t* allocator_ptr, uint32_t blocks_index)
+static memory_block_node_t* get_node_by_index(buddy_allocator_t* allocator_ptr, uint32_t block_index)
 {
-    return (block_node_t*)(blocks_index * sizeof(block_node_t) + (uintptr_t)allocator_ptr->blocks_nodes);
+    return (memory_block_node_t*)(block_index * sizeof(memory_block_node_t) + (uintptr_t)allocator_ptr->blocks_nodes);
 }
 
 /*
@@ -48,6 +48,24 @@ static uint8_t get_order_by_index(buddy_allocator_t* allocator_ptr, uint32_t blo
 static uint32_t get_size_by_order(buddy_allocator_t* allocator_ptr, uint8_t order)
 {
     return (1 << order) * allocator_ptr->page_size;
+}
+
+/*
+ * Get order by size
+ */
+static uint8_t get_order_by_size(buddy_allocator_t* allocator_ptr, size_t size)
+{
+    // We cannot allocate memory less than 1 page (smallest block)
+    uint32_t current_size = allocator_ptr->page_size;
+    uint8_t order = 0;
+    // We trying to allocate memory larger than a small block
+    if (size > allocator_ptr->page_size) {
+        while (current_size < size) {
+            current_size *= 2;
+            order++;
+        }
+    }
+    return order;
 }
 
 /*
@@ -100,13 +118,92 @@ static uint32_t get_second_child_by_index(buddy_allocator_t* allocator_ptr, uint
 }
 
 /*
+ * Get blocks parent by index
+ */
+static uint32_t get_parent_by_index(buddy_allocator_t* allocator_ptr, uint32_t block_index)
+{
+    return (block_index - allocator_ptr->large_blocks_number) / 2;
+}
+
+/*
  * Get index in order by global index
  */
 static uint32_t get_index_in_order_by_index(buddy_allocator_t* allocator_ptr, uint32_t block_index)
 {
+    if (block_index < allocator_ptr->large_blocks_number) {
+        return block_index;
+    }
     uint8_t order = get_order_by_index(allocator_ptr, block_index);
-    uint32_t blocks_number_in_previous_order = allocator_ptr->large_blocks_number * ((1 << (allocator_ptr->max_order - order)) - 1);
-    return block_index - blocks_number_in_previous_order;
+    uint32_t blocks_number_in_previous_orders = allocator_ptr->large_blocks_number * ((1 << (allocator_ptr->max_order - order)) - 1);
+    return block_index - blocks_number_in_previous_orders;
+}
+
+/*
+ * Get block buddy index by index
+ * Don't use if (block_index < large_blocks_number && (allocator_ptr->large_blocks_number % 2) == 1)
+ * because last large block don't have buddy
+ * In general, there is no need to call this function for large blocks because they are not merge
+ */
+static uint32_t get_buddy_by_index(buddy_allocator_t* allocator_ptr, uint32_t block_index)
+{
+    if (block_index < allocator_ptr->large_blocks_number) {
+        return block_index ^ 1;
+    }
+    uint32_t in_order_index = get_index_in_order_by_index(allocator_ptr, block_index);
+    uint8_t order = get_order_by_index(allocator_ptr, block_index);
+    uint32_t blocks_number_in_previous_orders = allocator_ptr->large_blocks_number * ((1 << (allocator_ptr->max_order - order)) - 1);
+    return (in_order_index ^ 1) + blocks_number_in_previous_orders;
+}
+
+/*
+ * Get global index by in order index
+ */
+static uint32_t get_index_by_in_order_index(buddy_allocator_t* allocator_ptr, uint32_t block_index, uint8_t order)
+{
+    if (order == allocator_ptr->max_order) {
+        return block_index;
+    }
+    uint32_t blocks_number_in_previous_orders = allocator_ptr->large_blocks_number * ((1 << (allocator_ptr->max_order - order)) - 1);
+    return block_index + blocks_number_in_previous_orders;
+}
+
+/*
+ * Return true if block allocated (used by user) by index
+ * false otherwise
+ */
+static bool is_block_allocated_by_index(buddy_allocator_t* allocator_ptr, uint32_t block_index)
+{
+    uint32_t in_order_index = get_index_in_order_by_index(allocator_ptr, block_index);
+    uint8_t order = get_order_by_index(allocator_ptr, block_index);
+    uint32_t block_size = get_size_by_order(allocator_ptr, order);
+
+    if (allocator_ptr->allocations_orders[in_order_index * block_size / allocator_ptr->small_block_size] > 0) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+/*
+ * Returns true if the block is in any free list, otherwise false.
+ * IMPORTANT. To make this function work, it is necessary to set the next and prev fields of the removed block equal to NULL when remove a block from free list.
+ */
+static bool is_block_in_free_list_by_index(buddy_allocator_t* allocator_ptr, uint32_t block_index)
+{
+    memory_block_node_t* block_node_ptr = get_node_by_index(allocator_ptr, block_index);
+    dll_node_t* dll_node_ptr = (dll_node_t*)block_node_ptr;
+    if (dll_node_ptr->next != NULL || dll_node_ptr->prev != NULL) {
+        return true;
+    }
+    else {
+        // In case there is only one element in the doubly-linked list, its next and prev fields will be equal to NULL.
+        uint8_t order = get_order_by_index(allocator_ptr, block_index);
+        if (allocator_ptr->free_blocks_lists[order].count == 1 && allocator_ptr->free_blocks_lists[order].head == dll_node_ptr && allocator_ptr->free_blocks_lists[order].tail == dll_node_ptr) {
+            return true;
+        }
+        return false;
+    }
 }
 
 void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr)
@@ -114,7 +211,7 @@ void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_st
     if (page_size == 0) {
         return;
     }
-    if (allocator_ptr == NULL || area_start_addr == 0 || area_start_addr % page_size != 0 || area_size == 0 || required_memory_size_ptr == NULL) {
+    if (allocator_ptr == NULL || area_start_addr == 0 || area_size == 0 || max_order >= 32 || (page_size && !(page_size & (page_size - 1))) == 0 || required_memory_size_ptr == NULL) {
         return;
     }
     allocator_ptr->large_block_size = (1 << max_order) * page_size;
@@ -134,7 +231,7 @@ void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_st
     allocator_ptr->page_size = page_size;
 
     // For blocks nodes
-    allocator_ptr->blocks_nodes_memory_size = allocator_ptr->total_blocks_number * sizeof(block_node_t);
+    allocator_ptr->blocks_nodes_memory_size = allocator_ptr->total_blocks_number * sizeof(memory_block_node_t);
     // For free blocks lists
     allocator_ptr->free_blocks_lists_memory_size = (allocator_ptr->max_order + 1) * sizeof(doubly_linked_list_t);
     // For allocations orders array
@@ -183,8 +280,8 @@ void buddy_allocator_init(buddy_allocator_t* allocator_ptr, void* required_memor
 
     // Right now all of our large blocks are free, let's put them on the free list
     for (uint32_t index = 0; index < allocator_ptr->large_blocks_number; ++index) {
-        block_node_t* block_node = get_node_by_index(allocator_ptr, index);
-        dll_insert_node_to_tail(&allocator_ptr->free_blocks_lists[allocator_ptr->max_order], (dll_node_t*)block_node);
+        memory_block_node_t* memory_block_node = get_node_by_index(allocator_ptr, index);
+        dll_insert_node_to_tail(&allocator_ptr->free_blocks_lists[allocator_ptr->max_order], (dll_node_t*)memory_block_node);
     }
 }
 
@@ -194,23 +291,14 @@ void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size)
         return NULL;
     }
 
-    // We cannot allocate memory less than 1 page (smallest block)
-    uint32_t current_size = allocator_ptr->page_size;
-    uint8_t required_order = 0;
-    // We trying to allocate memory larger than a small block
-    if (size > allocator_ptr->page_size) {
-        while (current_size < size) {
-            current_size *= 2;
-            required_order++;
-        }
-    }
+    uint8_t required_order = get_order_by_size(allocator_ptr, size);
 
     // Trying to find a free block of required size
     find_and_allocate_block:
     if (allocator_ptr->free_blocks_lists[required_order].count > 0) {
         // We found a free block of the requested size, we take it and remove it from the free list
         // Take first free block node
-        block_node_t* free_block_node_ptr = (block_node_t*)allocator_ptr->free_blocks_lists[required_order].head;
+        memory_block_node_t* free_block_node_ptr = (memory_block_node_t*)allocator_ptr->free_blocks_lists[required_order].head;
         uint32_t free_block_index = get_index_by_node(allocator_ptr, free_block_node_ptr);
         uint32_t free_block_size = get_size_by_order(allocator_ptr, required_order);
 
@@ -218,12 +306,13 @@ void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size)
         uintptr_t memory_block_addr = get_index_in_order_by_index(allocator_ptr, free_block_index) * free_block_size;
 
         // Remove block from free list
+        //printf("A Remove node %u from order %u free list\n", get_index_by_node(allocator_ptr, free_block_node_ptr), required_order);
         dll_remove_node(&allocator_ptr->free_blocks_lists[required_order], (dll_node_t*)free_block_node_ptr);
         ((dll_node_t*)free_block_node_ptr)->next = NULL;
         ((dll_node_t*)free_block_node_ptr)->prev = NULL;
 
         // Save allocation order
-        allocator_ptr->allocations_orders[memory_block_addr / allocator_ptr->small_block_size] = (uint8_t)required_order;
+        allocator_ptr->allocations_orders[memory_block_addr / allocator_ptr->small_block_size] = (uint8_t)required_order + 1;
 
         // Return calculated memory block addr
         return (void*)(memory_block_addr + allocator_ptr->area_start_addr);
@@ -248,7 +337,7 @@ void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size)
         while (current_order > required_order) {
             //printf("split order %u\n", current_order);
 
-            block_node_t* split_block_node_ptr = (block_node_t*)allocator_ptr->free_blocks_lists[current_order].head;
+            memory_block_node_t* split_block_node_ptr = (memory_block_node_t*)allocator_ptr->free_blocks_lists[current_order].head;
             uint32_t split_block_index = get_index_by_node(allocator_ptr, split_block_node_ptr);
             uint32_t split_block_first_child_index = get_first_child_by_index(allocator_ptr, split_block_index);
             uint32_t split_block_second_child_index = get_second_child_by_index(allocator_ptr, split_block_index);
@@ -256,12 +345,15 @@ void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size)
 
             // Split current block
             // Put childs to the free list
-            block_node_t* split_block_first_child_node_ptr = get_node_by_index(allocator_ptr, split_block_first_child_index);
-            block_node_t* split_block_second_child_node_ptr = get_node_by_index(allocator_ptr, split_block_second_child_index);
+            memory_block_node_t* split_block_first_child_node_ptr = get_node_by_index(allocator_ptr, split_block_first_child_index);
+            memory_block_node_t* split_block_second_child_node_ptr = get_node_by_index(allocator_ptr, split_block_second_child_index);
+            //printf("A Put node %u in order %u free list\n", get_index_by_node(allocator_ptr, split_block_first_child_node_ptr), current_order - 1);
             dll_insert_node_to_head(&allocator_ptr->free_blocks_lists[current_order - 1], (dll_node_t*)split_block_first_child_node_ptr);
+            //printf("A Put node %u in order %u free list\n", get_index_by_node(allocator_ptr, split_block_second_child_node_ptr), current_order - 1);
             dll_insert_node_after_node(&allocator_ptr->free_blocks_lists[current_order - 1], (dll_node_t*)split_block_first_child_node_ptr, (dll_node_t*)split_block_second_child_node_ptr);
 
             // Remove splitted block from the free list
+            //printf("A Remove node %u from order %u free list\n", get_index_by_node(allocator_ptr, split_block_node_ptr), current_order);
             dll_remove_node(&allocator_ptr->free_blocks_lists[current_order], (dll_node_t*)split_block_node_ptr);
             ((dll_node_t*)split_block_node_ptr)->next = NULL;
             ((dll_node_t*)split_block_node_ptr)->prev = NULL;
@@ -271,5 +363,62 @@ void* buddy_allocator_alloc(buddy_allocator_t* allocator_ptr, size_t size)
 
         // Now we have a block of the requested size/order
         goto find_and_allocate_block;
+    }
+}
+
+void buddy_allocator_free(buddy_allocator_t* allocator_ptr, void* memory_ptr)
+{
+    if (allocator_ptr == NULL || memory_ptr == NULL) {
+        return;
+    }
+    if ((uintptr_t)memory_ptr < allocator_ptr->area_start_addr || (uintptr_t)memory_ptr > allocator_ptr->area_start_addr + allocator_ptr->area_size) {
+        return;
+    }
+    uintptr_t memory_block_addr = (uintptr_t)memory_ptr - allocator_ptr->area_start_addr;
+    if (allocator_ptr->allocations_orders[memory_block_addr / allocator_ptr->small_block_size] == 0) {
+        // Block unnallocated
+        return;
+    }
+    uint8_t freeing_block_order = allocator_ptr->allocations_orders[memory_block_addr / allocator_ptr->small_block_size] - 1;
+    allocator_ptr->allocations_orders[memory_block_addr / allocator_ptr->small_block_size] = 0;
+
+    uint32_t freeing_block_in_order_index = memory_block_addr / get_size_by_order(allocator_ptr, freeing_block_order);
+    uint32_t freeing_block_index = get_index_by_in_order_index(allocator_ptr, freeing_block_in_order_index, freeing_block_order);
+
+    try_free_block:
+    // We try to free largest block?
+    if (freeing_block_order == allocator_ptr->max_order) {
+        // Put block to free list
+        memory_block_node_t* freeing_block_node_ptr = get_node_by_index(allocator_ptr, freeing_block_index);
+        //printf("F Put node %u in order %u free list\n", get_index_by_node(allocator_ptr, freeing_block_node_ptr), allocator_ptr->max_order);
+        dll_insert_node_to_head(&allocator_ptr->free_blocks_lists[allocator_ptr->max_order], (dll_node_t*)freeing_block_node_ptr);
+    }
+    else {
+        // We need to merge blocks if two buddies are free
+        uint32_t freeing_block_buddy_index = get_buddy_by_index(allocator_ptr, freeing_block_index);
+        //printf("%u %u\n", freeing_block_index, freeing_block_buddy_index);
+
+        // Buddy is in free list?
+        if (is_block_in_free_list_by_index(allocator_ptr, freeing_block_buddy_index)) {
+            // Buddy is in free list
+            // Remove buddy from free list
+            memory_block_node_t* freeing_block_buddy_node_ptr = get_node_by_index(allocator_ptr, freeing_block_buddy_index);
+            //printf("F Remove node %u from order %u free list\n", get_index_by_node(allocator_ptr, freeing_block_buddy_node_ptr), freeing_block_order);
+            dll_remove_node(&allocator_ptr->free_blocks_lists[freeing_block_order], (dll_node_t*)freeing_block_buddy_node_ptr);
+            // Go to parent
+            freeing_block_index = get_parent_by_index(allocator_ptr, freeing_block_index);
+            freeing_block_order++;
+            goto try_free_block;
+        }
+        else {
+            // Buddy not in free list
+            // We can't merge blocks
+            // Add block to free list
+            // We add it to the tail, so it is less likely that it will be allocated and we are more likely to be able to combine blocks
+            // If we were add blocks to head, then probably the buddies would never be free at the same time
+            memory_block_node_t* freeing_block_node_ptr = get_node_by_index(allocator_ptr, freeing_block_index);
+            //printf("F Put node %u in order %u free list\n", get_index_by_node(allocator_ptr, freeing_block_node_ptr), freeing_block_order);
+            dll_insert_node_to_tail(&allocator_ptr->free_blocks_lists[freeing_block_order], (dll_node_t*)freeing_block_node_ptr);
+        }
     }
 }

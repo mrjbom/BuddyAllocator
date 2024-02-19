@@ -3,6 +3,8 @@
 
 extern void tests_preinit(void);
 
-extern void tests_small_sizes(void);
+extern void tests_small_sizes_predetermined(void);
+
+extern void tests_random(void);
 
 #endif

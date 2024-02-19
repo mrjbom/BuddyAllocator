@@ -130,3 +130,30 @@ void dll_remove_node(doubly_linked_list_t* list, dll_node_t* node)
         }
     }
 }
+
+dll_node_t* dll_get_nth_node(doubly_linked_list_t* list, size_t index)
+{
+    if (list == NULL) {
+        return NULL;
+    }
+    if (index >= list->count) {
+        return NULL;
+    }
+    if (index == 0) {
+        return list->head;
+    }
+    if (index == (list->count - 1)) {
+        return list->tail;
+    }
+    dll_node_t* current_node = list->head->next;
+    for (size_t i = 1; i < list->count - 1; ++i) {
+        if (i == index) {
+            return current_node;
+        }
+        else {
+            current_node = current_node->next;
+        }
+    }
+    // Unreachable
+    return NULL;
+}
