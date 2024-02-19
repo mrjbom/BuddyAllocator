@@ -301,7 +301,7 @@ enum ACTION {
 uintptr_t g_area_start_addr = 0;
 
 const size_t g_area_size_max = 16384;
-const size_t g_area_size_min = 4096;
+const size_t g_area_size_min = 8192;
 // Random
 size_t g_area_size = 0;
 
@@ -541,15 +541,15 @@ void tests_random()
         uint32_t random_test_iterations_number_max = 8192;
         //[min max]
         uint32_t random_test_iterations_number = random_test_iterations_number_min + (rand() % ((random_test_iterations_number_max + 1) - random_test_iterations_number_min));
-        //printf("Random iterations number: %u\n", random_test_iterations_number);
+        printf("Random iterations number: %u\n", random_test_iterations_number);
 
-        // Generate random size
+        // Generate random area size
         g_area_size = g_area_size_min + (rand() % ((g_area_size_max + 1) - g_area_size_min));
-        //printf("Random area size number: %u\n", g_area_size);
+        printf("Random area size number: %u\n", g_area_size);
 
-        // Generate random
+        // Generate random max order
         g_max_order = g_max_order_min + (rand() % ((g_max_order_max + 1) - g_max_order_min));
-        //printf("Random max order: %u\n", g_max_order);
+        printf("Random max order: %u\n", g_max_order);
 
         memset(&g_allocated_blocks_list, 0, sizeof(doubly_linked_list_t));
         memset(&g_allocator, 0, sizeof(buddy_allocator_t));
@@ -582,7 +582,7 @@ void tests_random()
                 uint32_t rand_index = rand() % g_allocated_blocks_list.count;
                 //rand_index = i;
                 block_info_t* memory_block_ptr = (block_info_t*)dll_get_nth_node(&g_allocated_blocks_list, rand_index);
-                dll_remove_node(&g_allocated_blocks_list, memory_block_ptr);
+                dll_remove_node(&g_allocated_blocks_list, (dll_node_t*)memory_block_ptr);
                 free(memory_block_ptr);
             }
             //printf("-end-\n");
