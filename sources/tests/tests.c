@@ -423,10 +423,18 @@ void tests_small_sizes_predetermined2(void)
             assert((uintptr_t)allocated_addr == j * 8 + fake_area_start_addr);
         }
 
+        assert(allocator.free_blocks_lists[2].count == 0);
+        assert(allocator.free_blocks_lists[1].count == 0);
+        assert(allocator.free_blocks_lists[0].count == 0);
+
         // Free all allocated blocks 20 - 9
         for (int32_t j = 11; j >= 0; --j) {
             buddy_allocator_free(&allocator, (void*)(j * 8 + fake_area_start_addr));
         }
+
+        assert(allocator.free_blocks_lists[2].count == 3);
+        assert(allocator.free_blocks_lists[1].count == 0);
+        assert(allocator.free_blocks_lists[0].count == 0);
     }
 
     free(required_memory);
