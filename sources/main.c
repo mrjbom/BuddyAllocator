@@ -8,6 +8,8 @@ int main(int argc, char* argv[])
     tests_preinit();
     printf("tests_small_sizes_predetermined()\n");
     tests_small_sizes_predetermined();
+    printf("tests_small_sizes_predetermined2()\n");
+    tests_small_sizes_predetermined2();
     printf("tests_random()\n");
     tests_random();
     printf("OK!\n");

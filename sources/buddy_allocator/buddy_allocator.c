@@ -371,7 +371,7 @@ void buddy_allocator_free(buddy_allocator_t* allocator_ptr, void* memory_ptr)
     if (allocator_ptr == NULL || memory_ptr == NULL) {
         return;
     }
-    if ((uintptr_t)memory_ptr < allocator_ptr->area_start_addr || (uintptr_t)memory_ptr > allocator_ptr->area_start_addr + allocator_ptr->area_size) {
+    if ((uintptr_t)memory_ptr < allocator_ptr->area_start_addr || (uintptr_t)memory_ptr >= allocator_ptr->area_start_addr + allocator_ptr->area_size) {
         return;
     }
     uintptr_t memory_block_addr = (uintptr_t)memory_ptr - allocator_ptr->area_start_addr;
@@ -414,7 +414,7 @@ void buddy_allocator_free(buddy_allocator_t* allocator_ptr, void* memory_ptr)
             // Buddy not in free list
             // We can't merge blocks
             // Add block to free list
-            // We add it to the tail, so it is less likely that it will be allocated and we are more likely to be able to combine blocks
+            // We add it to the tail, so it is less likely that it will be allocated and we are more likely to be able to merge blocks
             // If we were add blocks to head, then probably the buddies would never be free at the same time
             memory_block_node_t* freeing_block_node_ptr = get_node_by_index(allocator_ptr, freeing_block_index);
             //printf("F Put node %u in order %u free list\n", get_index_by_node(allocator_ptr, freeing_block_node_ptr), freeing_block_order);

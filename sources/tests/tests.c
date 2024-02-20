@@ -291,6 +291,147 @@ void tests_small_sizes_predetermined()
     free(required_memory);
 }
 
+void tests_small_sizes_predetermined2(void)
+{
+    buddy_allocator_t allocator;
+    uint32_t fake_area_start_addr = 0x1000;
+    uint8_t max_order = 2;
+    uint32_t required_memory_size = 0;
+    memset(&allocator, 0, sizeof(buddy_allocator_t));
+    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, &required_memory_size);
+    void* required_memory = malloc(required_memory_size);
+    assert(required_memory != NULL);
+    buddy_allocator_init(&allocator, required_memory);
+
+    // 2 |     0     |     1     |     2     | 32 bytes per blocks
+    // 1 |  3  |  4  |  5  |  6  |  7  |  8  | 16 bytes per blocks
+    // 0 |9 |10|11|12|13|14|15|16|17|18|19|20| 8 bytes per blocks
+
+    for (uint32_t i = 0; i < 3; ++i) {
+        // Try to allocate 6x 16 bytes blocks
+        void* allocated_addr = NULL;
+        // Block 3
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert((uintptr_t)allocated_addr == 0 * 16 + fake_area_start_addr);
+        // Block 4
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert((uintptr_t)allocated_addr == 1 * 16 + fake_area_start_addr);
+        // Block 5
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert((uintptr_t)allocated_addr == 2 * 16 + fake_area_start_addr);
+        // Block 6
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert((uintptr_t)allocated_addr == 3 * 16 + fake_area_start_addr);
+        // Block 7
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert((uintptr_t)allocated_addr == 4 * 16 + fake_area_start_addr);
+        // Block 8
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert((uintptr_t)allocated_addr == 5 * 16 + fake_area_start_addr);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert(allocated_addr == NULL);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert(allocated_addr == NULL);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 8);
+        assert(allocated_addr == NULL);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 32);
+        assert(allocated_addr == NULL);
+
+        assert(allocator.free_blocks_lists[2].count == 0);
+        assert(allocator.free_blocks_lists[1].count == 0);
+        assert(allocator.free_blocks_lists[0].count == 0);
+
+        // Free all alocated blocks
+        // Block 8
+        buddy_allocator_free(&allocator, (void*)(5 * 16 + fake_area_start_addr));
+        // Block 7
+        buddy_allocator_free(&allocator, (void*)(4 * 16 + fake_area_start_addr));
+        // Block 6
+        buddy_allocator_free(&allocator, (void*)(3 * 16 + fake_area_start_addr));
+        // Block 5
+        buddy_allocator_free(&allocator, (void*)(2 * 16 + fake_area_start_addr));
+        // Block 4
+        buddy_allocator_free(&allocator, (void*)(1 * 16 + fake_area_start_addr));
+        // Block 3
+        buddy_allocator_free(&allocator, (void*)(0 * 16 + fake_area_start_addr));
+
+        assert(allocator.free_blocks_lists[2].count == 3);
+        assert(allocator.free_blocks_lists[1].count == 0);
+        assert(allocator.free_blocks_lists[0].count == 0);
+    }
+
+    for (uint32_t i = 0; i < 3; ++i) {
+        // Try to allocate 3x 32 bytes blocks
+        void* allocated_addr = NULL;
+        // Block 0
+        allocated_addr = buddy_allocator_alloc(&allocator, 32);
+        assert((uintptr_t)allocated_addr == 0 * 32 + fake_area_start_addr);
+        // Block 1
+        allocated_addr = buddy_allocator_alloc(&allocator, 32);
+        assert((uintptr_t)allocated_addr == 1 * 32 + fake_area_start_addr);
+        // Block 2
+        allocated_addr = buddy_allocator_alloc(&allocator, 32);
+        assert((uintptr_t)allocated_addr == 2 * 32 + fake_area_start_addr);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 32);
+        assert(allocated_addr == NULL);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 16);
+        assert(allocated_addr == NULL);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 8);
+        assert(allocated_addr == NULL);
+        // NULL
+        allocated_addr = buddy_allocator_alloc(&allocator, 32);
+        assert(allocated_addr == NULL);
+
+        assert(allocator.free_blocks_lists[2].count == 0);
+        assert(allocator.free_blocks_lists[1].count == 0);
+        assert(allocator.free_blocks_lists[0].count == 0);
+
+        // Free all alocated blocks
+        // Wrong, out of memory area, block 3 not exist
+        // Block 3
+        buddy_allocator_free(&allocator, (void*)(3 * 32 + fake_area_start_addr));
+        // Block 2
+        buddy_allocator_free(&allocator, (void*)(2 * 32 + fake_area_start_addr));
+        // Block 1
+        buddy_allocator_free(&allocator, (void*)(1 * 32 + fake_area_start_addr));
+        // Wrong, double allocation
+        // Block 1
+        buddy_allocator_free(&allocator, (void*)(1 * 32 + fake_area_start_addr));
+        // Block 0
+        buddy_allocator_free(&allocator, (void*)(0 * 32 + fake_area_start_addr));
+        // Wornd, out of memory area
+        // Block -1
+        buddy_allocator_free(&allocator, (void*)(-1 * 32 + fake_area_start_addr));
+
+        assert(allocator.free_blocks_lists[2].count == 3);
+        assert(allocator.free_blocks_lists[1].count == 0);
+        assert(allocator.free_blocks_lists[0].count == 0);
+    }
+
+    for (uint32_t i = 0; i < 3; ++i) {
+        // Try to allocate 12x 8 bytes blocks
+        // Blocks 9 - 20
+        for (uint32_t j = 0; j < 12; ++j) {
+            void* allocated_addr = buddy_allocator_alloc(&allocator, 8);
+            assert((uintptr_t)allocated_addr == j * 8 + fake_area_start_addr);
+        }
+
+        // Free all allocated blocks 20 - 9
+        for (int32_t j = 11; j >= 0; --j) {
+            buddy_allocator_free(&allocator, (void*)(j * 8 + fake_area_start_addr));
+        }
+    }
+
+    free(required_memory);
+}
+
 // TESTS_RANDOM STAFF
 enum ACTION {
     ALLOCATE_RANDOM_BLOCKS,
