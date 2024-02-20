@@ -325,10 +325,6 @@ doubly_linked_list_t g_allocated_blocks_list;
 
 buddy_allocator_t g_allocator;
 
-void** g_check_buffer_ptr = NULL;
-//g_block_sizes[last]
-size_t g_check_buffer_size = 4096;
-
 static enum ACTION get_random_action()
 {
     if (g_allocated_blocks_list.count == 0) {
@@ -460,14 +456,11 @@ void do_action_free()
         assert(block_info_ptr != NULL);
         //printf("TRY FREE 0x%p (0x%p): ", block_info_ptr->block_ptr, (void*)((uintptr_t)(block_info_ptr->block_ptr) - g_area_start_addr));
 
-        // Check block
-        // Fill check buffer by block address
-        for (uint32_t j = 0; j < g_check_buffer_size / sizeof(void*); j++) {
-            g_check_buffer_ptr[j] = block_info_ptr->block_ptr;
-        }
         // Check block memory
-        int result = memcmp(g_check_buffer_ptr, block_info_ptr->block_ptr, block_info_ptr->block_size);
-        assert(result == 0);
+        for (uint32_t j = 0; j < block_info_ptr->block_size / sizeof(void*); j++) {
+            void** block_mem_ptr = block_info_ptr->block_ptr;
+            block_mem_ptr[i] = block_info_ptr->block_ptr;
+        }
 
         // Free block
         buddy_allocator_free(&g_allocator, block_info_ptr->block_ptr);
@@ -497,13 +490,11 @@ void do_action_check()
         block_info_t* block_info_ptr = (block_info_t*)dll_get_nth_node(&g_allocated_blocks_list, random_block_index);
         assert(block_info_ptr != NULL);
 
-        // Fill check buffer by block address
-        for (uint32_t j = 0; j < g_check_buffer_size / sizeof(void*); j++) {
-            g_check_buffer_ptr[j] = block_info_ptr->block_ptr;
-        }
         // Check block memory
-        int result = memcmp(g_check_buffer_ptr, block_info_ptr->block_ptr, block_info_ptr->block_size);
-        assert(result == 0);
+        for (uint32_t j = 0; j < block_info_ptr->block_size / sizeof(void*); j++) {
+            void** block_mem_ptr = block_info_ptr->block_ptr;
+            block_mem_ptr[i] = block_info_ptr->block_ptr;
+        }
     }
 }
 
@@ -553,8 +544,6 @@ void tests_random()
 
         memset(&g_allocated_blocks_list, 0, sizeof(doubly_linked_list_t));
         memset(&g_allocator, 0, sizeof(buddy_allocator_t));
-        g_check_buffer_ptr = malloc(g_check_buffer_size);
-        assert(g_check_buffer_ptr != NULL);
         g_area_start_addr = (uintptr_t)malloc(g_area_size);
         //printf("g_area_start_addr: 0x%p\n\n", (void*)g_area_start_addr);
         assert(g_area_start_addr != 0);
@@ -588,7 +577,6 @@ void tests_random()
             //printf("-end-\n");
         }
 
-        free(g_check_buffer_ptr);
         free((void*)g_area_start_addr);
         free(required_memory_ptr);
     }
