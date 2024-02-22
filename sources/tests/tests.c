@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
+#include <math.h>
 #include "../dllist/dllist.h"
 
 void tests_preinit()
@@ -449,8 +450,8 @@ enum ACTION {
 
 uintptr_t g_area_start_addr = 0;
 
-const size_t g_area_size_max = 16384;
-const size_t g_area_size_min = 8192;
+size_t g_area_size_max = 16384;
+size_t g_area_size_min = 8192;
 // Random
 size_t g_area_size = 0;
 
@@ -675,7 +676,12 @@ void tests_random()
     srand((unsigned int)time(0));
 
     for (uint32_t k = 1; k <= 8; ++k) {
-        // Random allocator data
+        // The minimum size of the memory area must be at least the size of the maximum block
+        if (g_area_size_min < pow(2, g_max_order_max) * g_page_size) {
+            printf("g_area_size_min is smaller than the size of a large block. The test is configured incorrectly. You need to increase g_area_size_min or decrease g_max_order_max\n");
+            exit(-1);
+        }
+
         // Random test iterations number
         uint32_t random_test_iterations_number_min = 4096;
         uint32_t random_test_iterations_number_max = 8192;
@@ -687,9 +693,20 @@ void tests_random()
         g_area_size = g_area_size_min + (rand() % ((g_area_size_max + 1) - g_area_size_min));
         printf("Random area size number: %u\n", g_area_size);
 
-        // Generate random max order
-        g_max_order = g_max_order_min + (rand() % ((g_max_order_max + 1) - g_max_order_min));
-        printf("Random max order: %u\n", g_max_order);
+        // I want the first iterations to check the maximum and minimum max order
+        if (k == 1) {
+            g_max_order = g_max_order_min;
+            printf("The minimum max order is used: %u\n", g_max_order);
+        }
+        else if (k == 2) {
+            g_max_order = g_max_order_max;
+            printf("The maximum max order is used: %u\n", g_max_order);
+        }
+        else {
+            // Generate random max order
+            g_max_order = g_max_order_min + (rand() % ((g_max_order_max + 1) - g_max_order_min));
+            printf("Random max order: %u\n", g_max_order);
+        }
 
         memset(&g_allocated_blocks_list, 0, sizeof(doubly_linked_list_t));
         memset(&g_allocator, 0, sizeof(buddy_allocator_t));
