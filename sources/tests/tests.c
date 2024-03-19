@@ -43,7 +43,7 @@ void tests_preinit()
         buddy_allocator_t allocator;
         uint32_t required_memory_size = 0;
         memset(&allocator, 0, sizeof(buddy_allocator_t));
-        buddy_allocator_preinit(&allocator, fake_area_start_addr, area_sizes[i], max_order, 4096, &required_memory_size);
+        buddy_allocator_preinit(&allocator, fake_area_start_addr, area_sizes[i], max_order, 4096, &required_memory_size, false);
         assert(allocator.large_blocks_number == large_blocks_number_control[i]);
         assert(allocator.small_blocks_number == small_blocks_number_control[i]);
         assert(allocator.total_blocks_number == total_blocks_number_control[i]);
@@ -78,7 +78,7 @@ void tests_small_sizes_predetermined()
 
     uint32_t required_memory_size = 0;
     memset(&allocator, 0, sizeof(buddy_allocator_t));
-    buddy_allocator_preinit(&allocator, fake_area_start_addr, 48, max_order, 4, &required_memory_size);
+    buddy_allocator_preinit(&allocator, fake_area_start_addr, 48, max_order, 4, &required_memory_size, false);
 
     assert(allocator.large_blocks_number == large_blocks_number_control);
     assert(allocator.small_blocks_number == small_blocks_number_control);
@@ -299,7 +299,7 @@ void tests_small_sizes_predetermined2(void)
     uint8_t max_order = 2;
     uint32_t required_memory_size = 0;
     memset(&allocator, 0, sizeof(buddy_allocator_t));
-    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, &required_memory_size);
+    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, &required_memory_size, false);
     void* required_memory = malloc(required_memory_size);
     assert(required_memory != NULL);
     buddy_allocator_init(&allocator, required_memory);
@@ -441,6 +441,47 @@ void tests_small_sizes_predetermined2(void)
     free(required_memory);
 }
 
+void tests_allocate_all_small_blocks(void)
+{
+    // Mark all small blocks as allocated by default
+
+    buddy_allocator_t allocator;
+    uint32_t fake_area_start_addr = 0x1000;
+    uint8_t max_order = 2;
+    uint32_t required_memory_size = 0;
+    memset(&allocator, 0, sizeof(buddy_allocator_t));
+    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, &required_memory_size, true);
+    void* required_memory = malloc(required_memory_size);
+    assert(required_memory != NULL);
+    buddy_allocator_init(&allocator, required_memory);
+
+    // 2 |     0     |     1     |     2     | 32 bytes per blocks
+    // 1 |  3  |  4  |  5  |  6  |  7  |  8  | 16 bytes per blocks
+    // 0 |9 |10|11|12|13|14|15|16|17|18|19|20| 8 bytes per blocks
+
+    assert(allocator.free_blocks_lists[0].count == 0);
+    assert(allocator.free_blocks_lists[1].count == 0);
+    assert(allocator.free_blocks_lists[2].count == 0);
+
+    void* allocated_addr = NULL;
+    // We can't allocate any block, because all of them allocated already
+    allocated_addr = buddy_allocator_alloc(&allocator, 8);
+    assert(allocated_addr == NULL);
+    
+    buddy_allocator_free(&allocator, (void*)(fake_area_start_addr + 0));
+    buddy_allocator_free(&allocator, (void*)(fake_area_start_addr + 8));
+    buddy_allocator_free(&allocator, (void*)(fake_area_start_addr + 16));
+    buddy_allocator_free(&allocator, (void*)(fake_area_start_addr + 24));
+    assert(allocator.free_blocks_lists[0].count == 0);
+    assert(allocator.free_blocks_lists[1].count == 0);
+    assert(allocator.free_blocks_lists[2].count == 1);
+
+    allocated_addr = buddy_allocator_alloc(&allocator, 8);
+    assert(allocated_addr == (void*)(fake_area_start_addr + 0));
+    
+    free(required_memory);
+}
+
 // TESTS_RANDOM STAFF
 enum ACTION {
     ALLOCATE_RANDOM_BLOCKS,
@@ -450,20 +491,22 @@ enum ACTION {
 
 uintptr_t g_area_start_addr = 0;
 
-size_t g_area_size_max = 16384;
-size_t g_area_size_min = 8192;
+size_t g_area_size_min = 8192; //16384
+size_t g_area_size_max = 16384; //32768
 // Random
 size_t g_area_size = 0;
 
-const uint8_t g_max_order_max = 9;
 const uint8_t g_max_order_min = 2;
+const uint8_t g_max_order_max = 9;
 // Random
 uint8_t g_max_order = 0;
 
 uint32_t g_page_size = 8;
+//uint32_t g_page_size = 16;
 
 // number of elements = max_order_max + 1
 size_t g_block_sizes[] = { 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096 };
+//size_t g_block_sizes[] = { 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 
 typedef struct {
     dll_node_t dll_node;
@@ -708,25 +751,27 @@ void tests_random()
             printf("Random max order: %u\n", g_max_order);
         }
 
-        memset(&g_allocated_blocks_list, 0, sizeof(doubly_linked_list_t));
-        memset(&g_allocator, 0, sizeof(buddy_allocator_t));
         g_area_start_addr = (uintptr_t)malloc(g_area_size);
         //printf("g_area_start_addr: 0x%p\n\n", (void*)g_area_start_addr);
         assert(g_area_start_addr != 0);
-        size_t required_memory_size = 0;
-        buddy_allocator_preinit(&g_allocator, g_area_start_addr, g_area_size, g_max_order, g_page_size, &required_memory_size);
-        assert(required_memory_size != 0);
-        void* required_memory_ptr = malloc(required_memory_size);
-        assert(required_memory_ptr != 0);
-        buddy_allocator_init(&g_allocator, required_memory_ptr);
-        printf("%u in progress...\n", k);
+
+        void* required_memory_ptr = NULL;
 
         for (uint32_t j = 0; j < random_test_iterations_number; ++j) {
             //printf("-start %u-\n", j);
             memset(&g_allocated_blocks_list, 0, sizeof(doubly_linked_list_t));
             memset(&g_allocator, 0, sizeof(buddy_allocator_t));
-            buddy_allocator_preinit(&g_allocator, g_area_start_addr, g_area_size, g_max_order, g_page_size, &required_memory_size);
+            size_t required_memory_size = 0;
+            buddy_allocator_preinit(&g_allocator, g_area_start_addr, g_area_size, g_max_order, g_page_size, &required_memory_size, false);
+            required_memory_ptr = malloc(required_memory_size);
+            assert(required_memory_ptr);
             buddy_allocator_init(&g_allocator, required_memory_ptr);
+            if (g_allocator.allocate_all_small_blocks) {
+                for (size_t i = 0; i < g_allocator.small_blocks_number; ++i) {
+                    buddy_allocator_free(&g_allocator, (void*)(g_area_start_addr + i * g_page_size));
+                }
+            }
+
             uint32_t rand_actions_number = rand() % 256;
             for (uint32_t i = 0; i < rand_actions_number; ++i) {
                 do_action();
@@ -740,10 +785,11 @@ void tests_random()
                 dll_remove_node(&g_allocated_blocks_list, (dll_node_t*)memory_block_ptr);
                 free(memory_block_ptr);
             }
+
+            free(required_memory_ptr);
             //printf("-end-\n");
         }
 
         free((void*)g_area_start_addr);
-        free(required_memory_ptr);
     }
 }

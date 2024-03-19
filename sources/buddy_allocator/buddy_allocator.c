@@ -206,7 +206,7 @@ static bool is_block_in_free_list_by_index(buddy_allocator_t* allocator_ptr, uin
     }
 }
 
-void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr)
+void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr, bool allocate_all_small_blocks)
 {
     if (page_size == 0) {
         return;
@@ -229,6 +229,8 @@ void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_st
     allocator_ptr->area_size = allocator_ptr->large_blocks_number * allocator_ptr->large_block_size;
     allocator_ptr->max_order = max_order;
     allocator_ptr->page_size = page_size;
+
+    allocator_ptr->allocate_all_small_blocks = allocate_all_small_blocks;
 
     // For blocks nodes
     allocator_ptr->blocks_nodes_memory_size = allocator_ptr->total_blocks_number * sizeof(memory_block_node_t);
@@ -276,12 +278,20 @@ void buddy_allocator_init(buddy_allocator_t* allocator_ptr, void* required_memor
     
     memset(allocator_ptr->blocks_nodes, 0, allocator_ptr->blocks_nodes_memory_size);
     memset(allocator_ptr->free_blocks_lists, 0, allocator_ptr->free_blocks_lists_memory_size);
-    memset(allocator_ptr->allocations_orders, 0, allocator_ptr->allocations_orders_memory_size);
+    if (allocator_ptr->allocate_all_small_blocks) {
+        // Mark all small block as allocated
+        memset(allocator_ptr->allocations_orders, 1, allocator_ptr->allocations_orders_memory_size);
+    }
+    else {
+        memset(allocator_ptr->allocations_orders, 0, allocator_ptr->allocations_orders_memory_size);
+    }
 
-    // Right now all of our large blocks are free, let's put them on the free list
-    for (uint32_t index = 0; index < allocator_ptr->large_blocks_number; ++index) {
-        memory_block_node_t* memory_block_node = get_node_by_index(allocator_ptr, index);
-        dll_insert_node_to_tail(&allocator_ptr->free_blocks_lists[allocator_ptr->max_order], (dll_node_t*)memory_block_node);
+    if (allocator_ptr->allocate_all_small_blocks == false) {
+        // Right now all of our large blocks are free, let's put them on the free list
+        for (uint32_t index = 0; index < allocator_ptr->large_blocks_number; ++index) {
+            memory_block_node_t* memory_block_node = get_node_by_index(allocator_ptr, index);
+            dll_insert_node_to_tail(&allocator_ptr->free_blocks_lists[allocator_ptr->max_order], (dll_node_t*)memory_block_node);
+        }
     }
 }
 

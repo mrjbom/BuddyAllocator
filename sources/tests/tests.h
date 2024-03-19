@@ -7,6 +7,8 @@ extern void tests_small_sizes_predetermined(void);
 
 extern void tests_small_sizes_predetermined2(void);
 
+extern void tests_allocate_all_small_blocks(void);
+
 extern void tests_random(void);
 
 #endif

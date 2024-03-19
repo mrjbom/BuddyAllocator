@@ -1,7 +1,8 @@
-#ifndef _BUDDY_ALLOCATOR_
-#define _BUDDY_ALLOCATOR_
+#ifndef _BUDDY_ALLOCATOR_H_
+#define _BUDDY_ALLOCATOR_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 #include "../dllist/dllist.h"
 
 /*
@@ -30,12 +31,14 @@ typedef struct {
 typedef struct {
     // Main variables
     uintptr_t area_start_addr;
-    // The size of the area rounded to largest block size.
+    // The size of the area rounded to largest block size
     size_t area_size;
     // Max order
     uint8_t max_order;
     // Page size
     uint32_t page_size;
+    // Should all small blocks be marked as highlighted during initialization
+    bool allocate_all_small_blocks;
 
     // Large block size (2^MAX_ORDER * PAGE_SIZE)
     size_t large_block_size;
@@ -85,12 +88,17 @@ typedef struct {
  * page_size page size must be power of 2
  * required_memory_size_ptr total size of the memory required by the allocator WILL BE PLACED BY THIS FUNCTION in this variable, it is necessary to allocate at least.
  * If it contains 0 after the function call, then the initialization has failed.
+ * allocate_all_small_blocks if true, then all small blocks will be marked as allocated, if false, then all of them are free (normal state).
+ * The true value is useful when there are areas occupied by something else in the area controlled by the allocator,
+ * in this case, the entire area is marked as occupied and then free pages are released in it using the page-by-page call of the free function.
+ * For example, in the OS kernel, we can have one allocator for the entire memory area, but it contains occupied areas (the kernel itself, ACPI, etc.),
+ * in this case, we can use allocate_all_small_blocks = true, and then free up unoccupied pages using the free function.
  *
  * About required_memory_size_ptr:
  * In order for the allocator to work, it is necessary to allocate memory for its needs.
  * The amount of this memory depends on the size of area (area_size) that the allocator will manage.
  */
-extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr);
+extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr, bool allocate_all_small_blocks);
 
 /*
  * Finishes initialization by initializing the memory required to work the allocator.
