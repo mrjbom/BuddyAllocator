@@ -15,7 +15,7 @@ It's tested by a random test that does random actions in random amounts, so it's
 buddy_allocator_t allocator;
 uint32_t required_memory_size = 0;
 memset(&allocator, 0, sizeof(buddy_allocator_t));
-buddy_allocator_preinit(&allocator, MEMORY_AREA_START, MEMORY_AREA_SIZE, MAX_ORDER, PAGE_SIZE, &required_memory_size, false);
+buddy_allocator_preinit(&allocator, MEMORY_AREA_START, MEMORY_AREA_SIZE, MAX_ORDER, PAGE_SIZE, false, &required_memory_size);
 if (required_memory_size == 0) {
     // Initialization failed, incorrect parameters
     return -1;
@@ -27,4 +27,6 @@ buddy_allocator_init(&allocator, required_memory_ptr);
 // Allocate 1 page (smallest block)
 void* allocated_memory_ptr = buddy_allocator_alloc(&allocator, 4096);
 buddy_allocator_free(&allocator, allocated_memory_ptr);
+
+free(required_memory_ptr);
 ```
