@@ -43,7 +43,7 @@ void tests_preinit()
         buddy_allocator_t allocator;
         uint32_t required_memory_size = 0;
         memset(&allocator, 0, sizeof(buddy_allocator_t));
-        buddy_allocator_preinit(&allocator, fake_area_start_addr, area_sizes[i], max_order, 4096, &required_memory_size, false);
+        buddy_allocator_preinit(&allocator, fake_area_start_addr, area_sizes[i], max_order, 4096, false, &required_memory_size);
         assert(allocator.large_blocks_number == large_blocks_number_control[i]);
         assert(allocator.small_blocks_number == small_blocks_number_control[i]);
         assert(allocator.total_blocks_number == total_blocks_number_control[i]);
@@ -78,7 +78,7 @@ void tests_small_sizes_predetermined()
 
     uint32_t required_memory_size = 0;
     memset(&allocator, 0, sizeof(buddy_allocator_t));
-    buddy_allocator_preinit(&allocator, fake_area_start_addr, 48, max_order, 4, &required_memory_size, false);
+    buddy_allocator_preinit(&allocator, fake_area_start_addr, 48, max_order, 4, false, &required_memory_size);
 
     assert(allocator.large_blocks_number == large_blocks_number_control);
     assert(allocator.small_blocks_number == small_blocks_number_control);
@@ -299,7 +299,7 @@ void tests_small_sizes_predetermined2(void)
     uint8_t max_order = 2;
     uint32_t required_memory_size = 0;
     memset(&allocator, 0, sizeof(buddy_allocator_t));
-    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, &required_memory_size, false);
+    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, false, &required_memory_size);
     void* required_memory = malloc(required_memory_size);
     assert(required_memory != NULL);
     buddy_allocator_init(&allocator, required_memory);
@@ -450,7 +450,7 @@ void tests_allocate_all_small_blocks(void)
     uint8_t max_order = 2;
     uint32_t required_memory_size = 0;
     memset(&allocator, 0, sizeof(buddy_allocator_t));
-    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, &required_memory_size, true);
+    buddy_allocator_preinit(&allocator, fake_area_start_addr, 96, max_order, 8, true, &required_memory_size);
     void* required_memory = malloc(required_memory_size);
     assert(required_memory != NULL);
     buddy_allocator_init(&allocator, required_memory);
@@ -762,7 +762,7 @@ void tests_random()
             memset(&g_allocated_blocks_list, 0, sizeof(doubly_linked_list_t));
             memset(&g_allocator, 0, sizeof(buddy_allocator_t));
             size_t required_memory_size = 0;
-            buddy_allocator_preinit(&g_allocator, g_area_start_addr, g_area_size, g_max_order, g_page_size, &required_memory_size, false);
+            buddy_allocator_preinit(&g_allocator, g_area_start_addr, g_area_size, g_max_order, g_page_size, false, &required_memory_size);
             required_memory_ptr = malloc(required_memory_size);
             assert(required_memory_ptr);
             buddy_allocator_init(&g_allocator, required_memory_ptr);

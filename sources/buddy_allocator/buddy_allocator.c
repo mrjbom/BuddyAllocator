@@ -206,7 +206,7 @@ static bool is_block_in_free_list_by_index(buddy_allocator_t* allocator_ptr, uin
     }
 }
 
-void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr, bool allocate_all_small_blocks)
+void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, bool allocate_all_small_blocks, size_t* required_memory_size_ptr)
 {
     if (page_size == 0) {
         return;

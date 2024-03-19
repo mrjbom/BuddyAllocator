@@ -7,7 +7,8 @@
 
 /*
  * Implementation of buddy allocator.
- * It is oriented on using physical memory as an allocator in the kernel, so it avoids using hosted functions (like malloc or pow).
+ * It is oriented on using as physical memory allocator in the kernel, so it not using hosted functions (like malloc() or pow()).
+ * 
  * == ATTENTION ==
  * It is oriented on 32-bit address space, probably there will be problems when working in 64-bit address space. I am testing only the 32-bit version.
  * 
@@ -17,7 +18,7 @@
  * | 1 | 2 |
  * |3|4|5|6|
  * Total blocks (nodes) - 7
- * This is a bit wasteful, but for a maximum area size of 4GB, to store all nodes at a node size of 8 bytes would require about 17 megabytes of memory, not much.
+ * This is a bit wasteful, but for a maximum area size of 4GB, to store all nodes at a node size of 8 bytes would require about 16 megabytes of memory, not much.
  * 
  * If any block is free, it is placed in the free list according to its size.
  * The free lists allows to quickly get a block of the required size, if it.
@@ -86,25 +87,26 @@ typedef struct {
  * area_size size of the memory area must to be larger than 2^max_order * page_size.
  * max_order max order
  * page_size page size must be power of 2
- * required_memory_size_ptr total size of the memory required by the allocator WILL BE PLACED BY THIS FUNCTION in this variable, it is necessary to allocate at least.
- * If it contains 0 after the function call, then the initialization has failed.
  * allocate_all_small_blocks if true, then all small blocks will be marked as allocated, if false, then all of them are free (normal state).
  * The true value is useful when there are areas occupied by something else in the area controlled by the allocator,
  * in this case, the entire area is marked as occupied and then free pages are released in it using the page-by-page call of the free function.
  * For example, in the OS kernel, we can have one allocator for the entire memory area, but it contains occupied areas (the kernel itself, ACPI, etc.),
  * in this case, we can use allocate_all_small_blocks = true, and then free up unoccupied pages using the free function.
+ * required_memory_size_ptr total size of the memory required by the allocator WILL BE PLACED BY THIS FUNCTION in this variable, it is necessary to allocate at least.
+ * If it contains 0 after the function call, then the initialization has failed.
  *
  * About required_memory_size_ptr:
  * In order for the allocator to work, it is necessary to allocate memory for its needs.
  * The amount of this memory depends on the size of area (area_size) that the allocator will manage.
  */
-extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, size_t* required_memory_size_ptr, bool allocate_all_small_blocks);
+extern void buddy_allocator_preinit(buddy_allocator_t* allocator_ptr, uintptr_t area_start_addr, size_t area_size, uint8_t max_order, uint32_t page_size, bool allocate_all_small_blocks, size_t* required_memory_size_ptr);
 
 /*
  * Finishes initialization by initializing the memory required to work the allocator.
  * allocator_ptr pointer to allocator data
  * required_memory_ptr pointer to the memory allocated for the needs of the allocator.
  * The size of this memory must be not less than the size specified in required_total_size_ptr after calling buddy_allocator_preinit function.
+ * Outside the area that the allocator will control if allocate_all_small_blocks is false!
  */
 extern void buddy_allocator_init(buddy_allocator_t* allocator_ptr, void* required_memory_ptr);
 
